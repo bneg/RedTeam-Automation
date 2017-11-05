@@ -38,7 +38,7 @@
         chdir: /root/empire
 
     - name: Start Empire in a screen session
-      command: screen -dmS Empire ./empire --resource /root/Resource/EmpireStartup.rc
+      command: screen -dmS Empire /root/empire/empire --resource /root/empire/EmpireStartup.rc
       args:
         chdir: /root/empire
       
