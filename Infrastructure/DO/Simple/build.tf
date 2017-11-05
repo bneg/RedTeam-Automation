@@ -1,6 +1,6 @@
 variable "do_token" {}
 variable "pub_key" {}
-variable "pvt_key" {}
+variable "pvt_key" {
 variable "ssh_fingerprint" {}
 
 provider "digitalocean" {
@@ -16,25 +16,6 @@ resource "digitalocean_droplet" "empire-server" {
     ssh_keys = [
        "${var.ssh_fingerprint}"
     ]
-
-inbound_rule = [
-    {
-      protocol           = "tcp"
-      port_range         = "22"
-      source_addresses   = ["0.0.0.0/0"]
-    },
-    {
-      protocol           = "tcp"
-      port_range         = "80"
-      source_addresses   = ["0.0.0.0/0", "::/0"]
-    },
-    {
-      protocol           = "tcp"
-      port_range         = "443"
-      source_addresses   = ["0.0.0.0/0", "::/0"]
-    },
-  ]
-
 
 connection {
     user = "root"

@@ -22,13 +22,13 @@
 
     - git: 
         repo: "https://github.com/EmpireProject/Empire"
-        version: dev
+        version: master
         dest: /root/empire
         update: yes
 
     - copy: 
-        src: ../Resource
-        dest: /root/
+        src: EmpireStartup.rc
+        dest: /root/empire
 
     - name: Setup Empire
       command: /root/empire/setup/install.sh
@@ -47,5 +47,5 @@
 
     - fetch: 
         src: /root/Empire_http80.ps1
-        dest: ../Empire_http80.ps1
+        dest: stager.ps1
         flat: yes
