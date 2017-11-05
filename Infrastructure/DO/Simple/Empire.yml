@@ -1,0 +1,51 @@
+- hosts: all
+  remote_user: root
+
+  gather_facts: False
+  pre_tasks:
+    - name: Install python for Ansible
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      changed_when: False
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt: 
+        upgrade: yes
+        update-cache: yes
+        cache_valid_time: 86400 #One Day
+
+    - name: Ensure git is installed
+      apt: name={{item}} state=present
+      with_items:
+        - git
+        - screen
+
+    - git: 
+        repo: "https://github.com/EmpireProject/Empire"
+        version: dev
+        dest: /root/empire
+        update: yes
+
+    - copy: 
+        src: ../Resource
+        dest: /root/
+
+    - name: Setup Empire
+      command: /root/empire/setup/install.sh
+      environment:
+        STAGING_KEY: 'RANDOM'
+      args:
+        chdir: /root/empire
+
+    - name: Start Empire in a screen session
+      command: screen -dmS Empire ./empire --resource /root/Resource/EmpireStartup.rc
+      args:
+        chdir: /root/empire
+      
+    - pause:
+        seconds: 5
+
+    - fetch: 
+        src: /root/Empire_http80.ps1
+        dest: ../Empire_http80.ps1
+        flat: yes
