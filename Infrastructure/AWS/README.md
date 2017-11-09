@@ -1,4 +1,4 @@
-# AWS CLI Instructions
+# AWS Instructions
 The most efficient way to run the AWS Terraform builds is to use the AWS CLI tool.
 
 1. Install AWS CLI tool
