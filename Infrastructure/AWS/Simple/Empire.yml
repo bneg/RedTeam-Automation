@@ -1,0 +1,61 @@
+- hosts: all
+  remote_user: ubuntu
+  become: true
+
+  vars:
+    external_ip: "{{ external_ip }}"
+
+  gather_facts: False
+  pre_tasks:
+    - name: Install python for Ansible
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      changed_when: False
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt: 
+        upgrade: yes
+        update-cache: yes
+        cache_valid_time: 86400 #One Day
+
+    - name: Ensure git is installed
+      apt: name={{item}} state=present
+      with_items:
+        - git
+        - screen
+
+    - git: 
+        repo: "https://github.com/EmpireProject/Empire"
+        version: master
+        dest: /root/empire
+        update: yes
+
+    - copy: 
+        src: EmpireStartup.rc
+        dest: /root/empire
+
+    - name: Add the external IP to Empire Resource File for proper Listener config
+      lineinfile:
+        dest=/root/empire/EmpireStartup.rc
+        insertafter="set Name http80"
+        line="set Host http://{{ external_ip }}"
+
+    - name: Setup Empire
+      command: /root/empire/setup/install.sh
+      environment:
+        STAGING_KEY: 'RANDOM'
+      args:
+        chdir: /root/empire
+
+    - name: Start Empire in a screen session
+      command: screen -dmS Empire bash -c 'sleep 2; /root/empire/empire --resource /root/empire/EmpireStartup.rc'
+      args:
+        chdir: /root/empire
+      
+    - pause:
+        seconds: 10
+
+    - fetch: 
+        src: /root/Empire_http80.ps1
+        dest: stager.ps1
+        flat: yes

