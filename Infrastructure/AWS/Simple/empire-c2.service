@@ -1,0 +1,12 @@
+[Unit]
+Description=Headless Empire C2
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+KillMode=none
+User=root
+WorkingDirectory=/root/empire
+ExecStart=/usr/bin/screen -dmS Empire /root/empire/empire --resource /root/empire/EmpireStartup.rc
+ExecStop=/usr/bin/screen -S Empire -p 0 -X quit
+Restart=on-abort
