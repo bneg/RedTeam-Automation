@@ -4,4 +4,3 @@ terraform $COMMAND \
 -var "aws_secret_key=XXXXXXXX" \
 -var "vpc_id=vpc-XXXXXXXX" \
 -var "pvt_key=$HOME/.ssh/empire-c2.pem"
-
