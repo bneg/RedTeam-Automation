@@ -1,32 +1,44 @@
 - hosts: all
   remote_user: ec2-user
-  gather_facts: False
+  become: true
 
+  vars:
+    ext_ip: '{{ external_ip }}'
+
+  gather_facts: False
   pre_tasks:
     - name: Install python for Ansible
       raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
       changed_when: False
 
   tasks:
-    - name: Update apt cache
-      raw: apt-get update
+    - name: Update and upgrade apt packages
+      apt: 
+        upgrade: yes
+        update-cache: yes
+        cache_valid_time: 86400 #One Day
 
-    - name: Ensure git and screen are installed
-      raw: apt-get install -y screen git
+    - name: Ensure git is installed
+      apt: name={{item}} state=present
+      with_items:
+        - git
+        - screen
 
     - git: 
         repo: "https://github.com/EmpireProject/Empire"
-        version: dev
+        version: master
         dest: /root/empire
         update: yes
 
     - copy: 
         src: EmpireStartup.rc
-        dest: /root/empire
+        dest: /root/empire/
 
-    - copy: 
-        src: empire-c2.service
-        dest: /etc/systemd/system
+    - name: Add the external IP to Empire Resource File for proper Listener config
+      lineinfile:
+        dest=/root/empire/EmpireStartup.rc
+        insertafter="set Name http80"
+        line="set Host http://{{ ext_ip }}"
 
     - name: Setup Empire
       command: /root/empire/setup/install.sh
@@ -34,6 +46,16 @@
         STAGING_KEY: 'RANDOM'
       args:
         chdir: /root/empire
-        
+      
+    - name: Start Empire in a tmux session
+      command: tmux new -d -s Empire './empire --resource /root/empire/EmpireStartup.rc'
+      args:
+        chdir: /root/empire
+      
     - pause:
-        seconds: 15
+        seconds: 10
+
+    - fetch: 
+        src: /root/Empire_http80.ps1
+        dest: Empire_http80.ps1
+        flat: yes

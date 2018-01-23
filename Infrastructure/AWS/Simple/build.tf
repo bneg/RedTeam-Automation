@@ -1,113 +1,99 @@
-variable "aws_access_key" {}
-variable "aws_secret_key" {}
-variable "vpc_id" {}
-variable "pvt_key" {}
-
+variable "pub_key" {}
+variable "priv_key" {}
 
 provider "aws" {
-    access_key = "${var.aws_access_key}"
-    secret_key = "${var.aws_secret_key}"
     region     = "us-west-2"
 }
 
-resource "aws_security_group" "empire_c2_security_group" {
-  name        = "empirec2-sg"
-  description = "Empire C2 security group."
-  vpc_id      = "${var.vpc_id}"
+# AWS Key Pair
+resource "aws_key_pair" "pubkey-empire-c2" {
+  key_name = "${var.priv_key}"
+  public_key = "${file(var.pub_key)}"
 }
 
-resource "aws_security_group_rule" "egress_access" {
-  type = "egress"
-  from_port = 0
-  to_port = 65535
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ]
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
+# AWS VPC
+resource "aws_vpc" "vpc-empire-c2" {
+  cidr_block = "10.0.0.0/16"
+  enable_dns_hostnames = true
 }
 
-resource "aws_security_group_rule" "ssh_ingress_access" {
-  type = "ingress"
-  from_port = 22
-  to_port = 22
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ] 
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
+resource "aws_subnet" "subnet-empire-c2" {
+  vpc_id = "${aws_vpc.vpc-empire-c2.id}"
+  cidr_block = "10.0.0.0/24"
 }
 
-resource "aws_security_group_rule" "ssh_http_access" {
-  type = "ingress"
-  from_port = 80
-  to_port = 80
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ]
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
+resource "aws_internet_gateway" "gw-empire-c2" {
+  vpc_id = "${aws_vpc.vpc-empire-c2.id}"
 }
 
-resource "aws_security_group_rule" "https_ingress_access" {
-  type = "ingress"
-  from_port = 443
-  to_port = 443
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ]
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
+resource "aws_route_table" "route-empire-c2" {
+  vpc_id = "${aws_vpc.vpc-empire-c2.id}"
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.gw-empire-c2.id}"
+  }
 }
 
-
-resource "aws_security_group_rule" "http_alt_ingress_access" {
-  type = "ingress"
-  from_port = 8080
-  to_port = 8080
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ]
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
+resource "aws_route_table_association" "rt-empire-c2" {
+  subnet_id = "${aws_subnet.subnet-empire-c2.id}"
+  route_table_id = "${aws_route_table.route-empire-c2.id}"
 }
 
-resource "aws_security_group_rule" "https_alt_ingress_access" {
-  type = "ingress"
-  from_port = 8443
-  to_port = 8443
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ]
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
-}
+# AWS Security Group (Firewall)
+resource "aws_security_group" "sg-empire-c2" {
+    name = "empire-c2-security-group"
+    vpc_id = "${aws_vpc.vpc-empire-c2.id}"
 
-resource "aws_security_group_rule" "shell_1_ingress_access" {
-  type = "ingress"
-  from_port = 1337
-  to_port = 1337
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ]
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
+    ingress {
+        from_port = 22
+        to_port = 22
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+    ingress {
+        from_port = 80
+        to_port = 80
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+    ingress {
+        from_port = 443
+        to_port = 443
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+    egress {
+        from_port = 0
+        to_port = 65534
+        protocol = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+    egress {
+        from_port = 0
+        to_port = 65534
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
 }
-
-resource "aws_security_group_rule" "shell_2_ingress_access" {
-  type = "ingress"
-  from_port = 31337
-  to_port = 31337
-  protocol = "tcp"
-  cidr_blocks = [ "0.0.0.0/0" ]
-  security_group_id = "${aws_security_group.empire_c2_security_group.id}"
-}
-
 
 resource "aws_instance" "empire-server" {
-    ami               = "ami-3fcd2747"
+    ami               = "ami-46a61a3e"
     instance_type     = "t2.micro"
-    key_name          = "empire-c2"
-    security_groups   = [ "${aws_security_group.empire_c2_security_group.name}" ]
+    key_name          = "${var.priv_key}"
+    vpc_security_group_ids = ["${aws_security_group.sg-empire-c2.id}"]
+    subnet_id = "${aws_subnet.subnet-empire-c2.id}"
+    associate_public_ip_address = true
     tags {
-     Name = "empire-c2"
+     Name = "empire-server"
       }
 
 provisioner "local-exec" {
-    command = "sleep 120; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ec2-user -b --private-key ${var.pvt_key} -i '${aws_instance.empire-server.public_ip},' Empire.yml"
-  }
-
-provisioner "local-exec" {
-    command = "sleep 60; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -vvvvv -u ec2-user -b --private-key ${var.pvt_key} -i '${aws_instance.empire-server.public_ip},' Screen.yml"
+    command = "sleep 120; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ec2-user -b --private-key ${var.priv_key} -i '${aws_instance.empire-server.public_ip},' Empire.yml"
   }
 }
 
 output "Empire C2 Server IP" {
     value = "${aws_instance.empire-server.public_ip}"
 }
+
