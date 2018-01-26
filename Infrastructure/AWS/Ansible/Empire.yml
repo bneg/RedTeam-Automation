@@ -31,14 +31,14 @@
         update: yes
 
     - copy: 
-        src: EmpireStartup.rc
+        src: ../Resources/EmpireStartup.rc
         dest: /root/empire/
 
     - name: Add the external IP to Empire Resource File for proper Listener config
       lineinfile:
         dest=/root/empire/EmpireStartup.rc
         insertafter="set Name http80"
-        line="set Host http://{{ ext_ip }}"
+        line= set Host http://{{ ext_ip }}
 
     - name: Setup Empire
       command: /root/empire/setup/install.sh
@@ -57,5 +57,5 @@
 
     - fetch: 
         src: /root/Empire_http80.ps1
-        dest: Empire_http80.ps1
+        dest: ../../Empire_http80.ps1
         flat: yes

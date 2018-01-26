@@ -89,7 +89,7 @@ resource "aws_instance" "empire-server" {
       }
 
 provisioner "local-exec" {
-    command = "sleep 120; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ec2-user -b --private-key ${var.priv_key} -i '${aws_instance.empire-server.public_ip},' Empire.yml"
+    command = "sleep 120; ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ec2-user -b --private-key ${var.priv_key} -i '${aws_instance.empire-server.public_ip},' --extra-vars \"external_ip=${aws_instance.empire-server.public_ip}\" ../Ansible/Empire.yml"
   }
 }
 

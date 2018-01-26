@@ -1,6 +1,6 @@
 listeners
 uselistener http
-set StagerURI /download/stager.php
+set StagerURI /download/http80.php
 set Name http80
 execute
 listeners
