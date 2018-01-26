@@ -38,7 +38,7 @@
       lineinfile:
         dest=/root/empire/EmpireStartup.rc
         insertafter="set Name http80"
-        line= set Host http://{{ ext_ip }}
+        line="set Host http://{{ external_ip }}"
 
     - name: Setup Empire
       command: /root/empire/setup/install.sh
